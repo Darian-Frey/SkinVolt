@@ -1,4 +1,5 @@
-use tauri::InvokeHandler;
+use tauri::ipc::InvokeHandler;
+
 
 pub fn register_commands() -> InvokeHandler {
     tauri::generate_handler![

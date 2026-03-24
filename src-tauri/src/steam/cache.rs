@@ -1,6 +1,8 @@
 use crate::db::get_db;
 use rusqlite::{params, Result};
 use serde_json;
+use rusqlite::OptionalExtension;
+
 
 /// Store the latest price for an item.
 #[tauri::command]

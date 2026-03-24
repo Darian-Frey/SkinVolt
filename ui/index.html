@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>SkinVolt</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="app.js"></script>
+</head>
+
+<body>
+    <div id="app">
+
+        <!-- Navigation -->
+        <nav id="navbar">
+            <div class="nav-title">SkinVolt</div>
+            <ul class="nav-links">
+                <li data-view="dashboard" class="active">Dashboard</li>
+                <li data-view="inventory">Inventory</li>
+                <li data-view="alerts">Alerts</li>
+                <li data-view="settings">Settings</li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main id="content">
+            <section id="dashboard-view" class="view active">
+                <h1>Dashboard</h1>
+                <div class="placeholder">Charts will appear here in Phase 2</div>
+            </section>
+
+            <section id="inventory-view" class="view">
+                <h1>Inventory</h1>
+                <div class="placeholder">Inventory data will load here</div>
+            </section>
+
+            <section id="alerts-view" class="view">
+                <h1>Alerts</h1>
+                <div class="placeholder">Price alerts will appear here</div>
+            </section>
+
+            <section id="settings-view" class="view">
+                <h1>Settings</h1>
+
+                <div class="settings-group">
+                    <label>Refresh Interval (seconds)</label>
+                    <input id="refreshInterval" type="number" min="10" value="60" />
+                </div>
+
+                <div class="settings-group">
+                    <label>Currency</label>
+                    <select id="currencySelect">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+
+                <div class="settings-group">
+                    <label>Dark Mode</label>
+                    <input id="darkModeToggle" type="checkbox" />
+                </div>
+
+                <button id="saveSettings">Save Settings</button>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>

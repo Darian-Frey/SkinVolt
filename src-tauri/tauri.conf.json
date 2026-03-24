@@ -1,0 +1,18 @@
+{
+    "identifier": "com.skinvolt.app",
+    "productName": "SkinVolt",
+    "version": "0.1.0",
+    "build": {
+        "frontendDist": "../ui"
+    },
+    "app": {
+        "windows": [
+            {
+                "title": "SkinVolt",
+                "width": 1200,
+                "height": 800,
+                "resizable": true
+            }
+        ]
+    }
+}
