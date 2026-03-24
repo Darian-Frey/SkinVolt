@@ -46,5 +46,14 @@ document.getElementById("saveSettings").addEventListener("click", async () => {
     alert("Settings saved");
 });
 
+window.__TAURI__.core.invoke("get_inventory")
+    .then(raw => {
+        const items = JSON.parse(raw);
+        console.log("Inventory:", items);
+    })
+    .catch(err => console.error("Inventory error:", err));
+
+
+
 // Initialize UI
 loadTheme();

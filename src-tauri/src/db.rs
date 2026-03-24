@@ -2,6 +2,7 @@ use rusqlite::{Connection, Result};
 use directories::ProjectDirs;
 use std::fs;
 use std::path::PathBuf;
+use serde::Serialize;
 
 /// Returns the path to SkinVolt's database file.
 fn db_path() -> PathBuf {
@@ -36,5 +37,42 @@ pub fn init_db() -> Result<()> {
     conn.execute_batch(&schema)?;
 
     Ok(())
+}
+
+//
+// ────────────────────────────────────────────────────────────────
+//   INVENTORY STRUCT + QUERY
+// ────────────────────────────────────────────────────────────────
+//
+
+#[derive(Serialize)]
+pub struct InventoryItem {
+    pub market_hash_name: String,
+    pub quantity: u32,
+}
+
+/// Loads the user's inventory from the database.
+pub fn get_inventory() -> Result<Vec<InventoryItem>, String> {
+    let conn = get_db().map_err(|e| e.to_string())?;
+
+    let mut stmt = conn
+        .prepare("SELECT market_hash_name, quantity FROM inventory")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(InventoryItem {
+                market_hash_name: row.get(0)?,
+                quantity: row.get(1)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut items = Vec::new();
+    for item in rows {
+        items.push(item.map_err(|e| e.to_string())?);
+    }
+
+    Ok(items)
 }
 
