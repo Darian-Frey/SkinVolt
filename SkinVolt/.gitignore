@@ -1,0 +1,56 @@
+# ============================
+# SkinVolt .gitignore
+# Rust + Tauri + Node UI
+# ============================
+
+# --- Rust ---
+/target/
+/Cargo.lock
+
+# --- Tauri ---
+/src-tauri/target/
+/src-tauri/gen/
+/src-tauri/.tauri-build
+
+# --- Node / UI ---
+/node_modules/
+/dist/
+/build/
+/ui/node_modules/
+/ui/dist/
+/ui/.vite/
+
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- OS / Editor Files ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# --- Environment / Secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- Cache ---
+/.cache/
+/tmp/
+/src-tauri/.cargo-cache
+
+# --- Generated Icons ---
+/icons/*.png
+/icons/*.ico
+/icons/*.icns
+
+# --- SQLite Database ---
+/skinvolt.db
+/cache.db
+
+
+# --- Personal Files ---
+*.txt
