@@ -247,6 +247,66 @@ async function changeTimeframe(days) {
     updateDashboard(_currentSelectedItem);
 }
 
+async function renderTopMovers() {
+    try {
+        const movers = await window.invoke("get_top_movers", { limit: 5 });
+        const list = document.getElementById("topMoversList");
+        
+        if (movers.length === 0) {
+            list.innerHTML = `<p class="loading">Not enough data yet (24h needed)</p>`;
+            return;
+        }
+
+        list.innerHTML = movers.map(m => `
+            <div class="mover-item">
+                <span>${m.market_hash_name.split('|')[1] || m.market_hash_name}</span>
+                <span class="${m.change_pct >= 0 ? 'up' : 'down'}">
+                    ${m.change_pct >= 0 ? '▲' : '▼'} ${Math.abs(m.change_pct).toFixed(1)}%
+                </span>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error("Top Movers failed:", err);
+    }
+}
+
+let _searchTimeout = null;
+function handleSearch() {
+    clearTimeout(_searchTimeout);
+    _searchTimeout = setTimeout(async () => {
+        const query = document.getElementById("marketSearch").value;
+        if (!query) {
+            renderInventory();
+            return;
+        }
+        
+        try {
+            const results = await window.invoke("search_market_items", { query });
+            renderInventoryResults(results);
+        } catch (err) {
+            console.error("Search failed:", err);
+        }
+    }, 300);
+}
+
+function renderInventoryResults(data) {
+    const tbody = document.getElementById("inventoryBody");
+    tbody.innerHTML = data.map(item => {
+        const priceText = item.price != null ? `$${item.price.toFixed(2)}` : 'Pending...';
+        const safeName = item.market_hash_name.replace(/'/g, "\\'");
+        return `
+            <tr data-item="${item.market_hash_name}">
+                <td style="cursor: pointer; color: var(--accent);" onclick="showItemDetails('${safeName}')">
+                    ${item.market_hash_name}
+                </td>
+                <td>${item.quantity}</td>
+                <td class="price-cell">${priceText}</td>
+                <td>--</td>
+            </tr>
+        `;
+    }).join('');
+}
+
 async function updateDashboard(itemName) {
     if (!itemName && !_currentSelectedItem) {
         if (_inventoryData.length > 0) {
@@ -259,6 +319,9 @@ async function updateDashboard(itemName) {
     if (itemName) _currentSelectedItem = itemName;
     else itemName = _currentSelectedItem;
 
+    // Trigger Top Movers independently
+    renderTopMovers();
+
     try {
         const analytics = await window.invoke("get_item_analytics", { marketHashName: itemName });
         let history = await window.invoke("get_item_history_full", { marketHashName: itemName });
@@ -268,11 +331,20 @@ async function updateDashboard(itemName) {
             history = history.slice(-_currentTimeframe);
         }
 
-        // Update Text Elements
-        document.getElementById("dashVolatility").innerText = analytics.volatility.toFixed(4);
-        document.getElementById("dashSMA30").innerText = `$${analytics.sma_30.toFixed(2)}`;
-        document.getElementById("dashTrend").innerText = analytics.trend.toUpperCase();
-        document.getElementById("marketTrend").innerText = `Target: ${itemName} | Signal: ${analytics.trend.toUpperCase()}`;
+        // Update Text Elements with safety checks
+        const volEl = document.getElementById("dashVolatility");
+        if (volEl) volEl.innerText = analytics.volatility.toFixed(4);
+
+        const smaEl = document.getElementById("dashSMA30");
+        if (smaEl) smaEl.innerText = `$${analytics.sma_30.toFixed(2)}`;
+
+        const trendEl = document.getElementById("dashTrend");
+        if (trendEl) trendEl.innerText = analytics.trend.toUpperCase();
+
+        const marketTrendEl = document.getElementById("marketTrend");
+        if (marketTrendEl) {
+            marketTrendEl.innerText = `Target: ${itemName} | Signal: ${analytics.trend.toUpperCase()}`;
+        }
 
         renderPriceChart(history, itemName);
     } catch (err) {

@@ -45,3 +45,11 @@ CREATE TABLE IF NOT EXISTS logs (
 
 CREATE INDEX IF NOT EXISTS idx_logs_timestamp
     ON logs (timestamp);
+
+CREATE TABLE IF NOT EXISTS item_metadata (
+    market_hash_name TEXT PRIMARY KEY,
+    rarity TEXT,
+    item_type TEXT,
+    collection TEXT,
+    icon_url TEXT
+);

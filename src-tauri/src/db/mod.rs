@@ -137,7 +137,6 @@ pub fn get_last_fetch_time(name: &str) -> Result<i64, String> {
 
 pub fn get_inventory() -> Result<Vec<InventoryItem>, String> {
     let conn = get_db().map_err(|e| e.to_string())?;
-
     let mut stmt = conn
         .prepare("SELECT market_hash_name, quantity FROM inventory")
         .map_err(|e| e.to_string())?;
@@ -162,4 +161,79 @@ pub fn get_inventory() -> Result<Vec<InventoryItem>, String> {
 pub struct InventoryItem {
     pub market_hash_name: String,
     pub quantity: u32,
+}
+
+// ────────────────────────────────────────────────────────────────
+//   MARKET DISCOVERY & METADATA
+// ────────────────────────────────────────────────────────────────
+
+#[derive(Serialize, Clone)]
+pub struct ItemMetadata {
+    pub market_hash_name: String,
+    pub rarity: Option<String>,
+    pub item_type: Option<String>,
+    pub collection: Option<String>,
+    pub icon_url: Option<String>,
+}
+
+pub fn upsert_item_metadata(m: ItemMetadata) -> Result<(), String> {
+    let conn = get_db().map_err(|e| e.to_string())?;
+    conn.execute(
+        "INSERT INTO item_metadata (market_hash_name, rarity, item_type, collection, icon_url)
+         VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT(market_hash_name) DO UPDATE SET
+            rarity = excluded.rarity,
+            item_type = excluded.item_type,
+            collection = excluded.collection,
+            icon_url = excluded.icon_url",
+        params![m.market_hash_name, m.rarity, m.item_type, m.collection, m.icon_url],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[derive(Serialize)]
+pub struct TopMover {
+    pub market_hash_name: String,
+    pub current_price: f64,
+    pub old_price: f64,
+    pub change_pct: f64,
+}
+
+pub fn get_top_movers_db(limit: u32) -> Result<Vec<TopMover>, String> {
+    let conn = get_db().map_err(|e| e.to_string())?;
+    let day_ago = chrono::Utc::now().timestamp() - 86400;
+
+    let mut stmt = conn.prepare(
+        "SELECT 
+            curr.market_hash_name, 
+            curr.price as current_price,
+            (SELECT price FROM price_history 
+             WHERE market_hash_name = curr.market_hash_name 
+             AND timestamp <= ?1 
+             ORDER BY timestamp DESC LIMIT 1) as old_price
+         FROM price_cache curr
+         WHERE old_price IS NOT NULL
+         ORDER BY ABS((curr.price - old_price) / old_price) DESC
+         LIMIT ?2"
+    ).map_err(|e| e.to_string())?;
+
+    let rows = stmt.query_map(params![day_ago, limit], |row| {
+        let name: String = row.get(0)?;
+        let curr: f64 = row.get(1)?;
+        let old: f64 = row.get(2)?;
+        let change = if old != 0.0 { (curr - old) / old * 100.0 } else { 0.0 };
+        Ok(TopMover {
+            market_hash_name: name,
+            current_price: curr,
+            old_price: old,
+            change_pct: change,
+        })
+    }).map_err(|e| e.to_string())?;
+
+    let mut movers = Vec::new();
+    for m in rows {
+        if let Ok(val) = m { movers.push(val); }
+    }
+    Ok(movers)
 }

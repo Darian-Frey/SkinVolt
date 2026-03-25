@@ -53,6 +53,12 @@
                 </div>
 
                 <div class="analytics-grid">
+                    <div class="analytics-card" id="topMoversCard">
+                        <h3>Trending (24h)</h3>
+                        <div id="topMoversList" class="mini-list">
+                            <p class="loading">Analyzing market...</p>
+                        </div>
+                    </div>
                     <div class="analytics-card">
                         <h3>Volatility</h3>
                         <p id="dashVolatility">--</p>
@@ -62,8 +68,8 @@
                         <p id="dashSMA30">--</p>
                     </div>
                     <div class="analytics-card">
-                        <h3>Trend</h3>
-                        <p id="dashTrend">--</p>
+                        <h3>Market Trend</h3>
+                        <p id="dashTrend">STABLE</p>
                     </div>
                 </div>
             </section>
@@ -71,6 +77,9 @@
             <section id="inventory-view" class="view">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h1>Inventory</h1>
+                    <div class="search-box">
+                        <input type="text" id="marketSearch" placeholder="🔍 Search local database..." oninput="handleSearch()">
+                    </div>
                     <span class="tier-badge" id="tierDisplay">Tier: Basic</span>
                 </div>
 

@@ -93,7 +93,9 @@ fn main() {
             settings::settings::toggle_dark_mode,
             settings::settings::dev_set_tier,
             analytics::get_item_analytics,
-            analytics::get_item_history_full
+            analytics::get_item_history_full,
+            analytics::get_top_movers,
+            analytics::search_market_items
         ])
         .run(tauri::generate_context!())
         .expect("error while running SkinVolt");

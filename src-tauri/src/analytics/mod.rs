@@ -83,3 +83,17 @@ pub fn get_item_history_full(market_hash_name: String) -> Result<Vec<PricePoint>
 
     Ok(history)
 }
+
+#[tauri::command]
+pub fn get_top_movers(limit: u32) -> Result<Vec<crate::db::TopMover>, String> {
+    crate::db::get_top_movers_db(limit)
+}
+
+#[tauri::command]
+pub fn search_market_items(query: String) -> Result<Vec<crate::db::InventoryItemFull>, String> {
+    let all = crate::db::get_inventory_full()?;
+    let filtered = all.into_iter()
+        .filter(|item| item.market_hash_name.to_lowercase().contains(&query.to_lowercase()))
+        .collect();
+    Ok(filtered)
+}

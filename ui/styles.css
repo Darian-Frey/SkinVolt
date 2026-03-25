@@ -233,6 +233,39 @@ button {
     font-family: 'JetBrains Mono', monospace;
 }
 
+.mini-list {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.mover-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.up { color: #4caf50; }
+.down { color: #f44336; }
+
+.search-box input {
+    background: var(--nav-bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--fg);
+    padding: 8px 15px;
+    border-radius: 20px;
+    width: 250px;
+    outline: none;
+    transition: width 0.3s;
+}
+
+.search-box input:focus {
+    width: 350px;
+    border-color: var(--accent);
+}
+
 .chart-controls {
     position: absolute;
     top: 10px;
