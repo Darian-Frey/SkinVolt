@@ -69,3 +69,15 @@ pub fn get_inventory() -> Result<Vec<InventoryItem>, String> {
     Ok(items)
 }
 
+pub fn add_inventory_item(name: String, quantity: u32) -> Result<(), String> {
+    let conn = get_db().map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "INSERT INTO inventory (market_hash_name, quantity) VALUES (?1, ?2)",
+        (name, quantity),
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+

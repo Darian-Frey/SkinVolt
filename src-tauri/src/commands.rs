@@ -26,6 +26,21 @@ pub struct PriceResponse {
     pub timestamp: i64,
 }
 
+#[derive(Deserialize)]
+pub struct AddItemArgs {
+    pub name: String,
+    pub quantity: u32,
+}
+
+#[command]
+pub fn add_item(args: AddItemArgs) -> Result<(), String> {
+    if args.name.trim().is_empty() {
+        return Err("Item name cannot be empty".into());
+    }
+
+    crate::db::add_inventory_item(args.name, args.quantity)
+}
+
 #[command]
 pub fn refresh_steam_data(args: RefreshArgs) -> Result<PriceResponse, String> {
     if args.item_name.trim().is_empty() {

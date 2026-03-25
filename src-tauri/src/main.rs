@@ -14,7 +14,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::ping,
             commands::get_inventory,
-            commands::refresh_steam_data
+            commands::refresh_steam_data,
+            commands::add_item
         ])
         .run(tauri::generate_context!())
         .expect("error while running SkinVolt");
