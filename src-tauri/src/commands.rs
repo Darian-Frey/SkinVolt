@@ -46,17 +46,25 @@ pub async fn add_item(args: AddItemArgs) -> Result<(), String> {
     // Save to DB first
     crate::db::add_inventory_item(args.name.clone(), args.quantity)?;
 
-    // THE HOOK: Every tier, including Free, gets one initial fetch on add 
-    match crate::steam::fetch::fetch_price(&args.name).await {
-        Ok((price, timestamp)) => {
-            let _ = crate::steam::cache::cache_price_data(args.name, price, timestamp);
-            Ok(())
-        }
-        Err(e) => {
-            println!("⚠️ Initial fetch failed: {}", e);
-            Ok(()) // Item is saved, will try again on next manual refresh
-        }
-    }
+    // initial fetch: price, metadata, AND FULL HISTORY
+    let name = args.name.clone();
+    tokio::spawn(async move {
+        let _ = crate::steam::fetch::fetch_price(&name).await.map(|(p, ts)| {
+            let _ = crate::steam::cache::cache_price_data(name.clone(), p, ts);
+        });
+        
+        let mut appid = Some(730);
+        let _ = crate::steam::fetch::fetch_item_details(&name).await.map(|m| {
+            appid = Some(m.appid);
+            let _ = crate::db::upsert_item_metadata(m);
+        });
+
+        let _ = crate::steam::fetch::fetch_price_history(name.clone(), appid).await.map(|h| {
+            let _ = crate::db::bulk_add_price_history(&name, h);
+        });
+    });
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -94,22 +102,48 @@ pub async fn refresh_steam_data(args: RefreshArgs) -> Result<PriceResponse, Stri
     }
 
     // 3. Call the fetcher
-    match crate::steam::fetch::fetch_price(&args.item_name).await {
-        Ok((price, timestamp)) => {
-            // Cache it for Phase 1 offline support and Phase 2 history tracking
-            let _ = crate::steam::cache::cache_price_data(args.item_name.clone(), price, timestamp);
-            
-            Ok(PriceResponse {
-                market_hash_name: args.item_name,
-                price,
-                timestamp,
-            })
-        }
+    let (price, timestamp) = match crate::steam::fetch::fetch_price(&args.item_name).await {
+        Ok(res) => res,
         Err(e) => {
-            println!("❌ [Command Error] Fetch failed for {}: {}", args.item_name, e);
-            Err(e)
+            println!("❌ [Command Error] Price failed for {}: {}", args.item_name, e);
+            return Err(e);
         }
-    }
+    };
+
+    // Cache it
+    let _ = crate::steam::cache::cache_price_data(args.item_name.clone(), price, timestamp);
+
+    // 4. Background metadata fetch if missing
+    let name = args.item_name.clone();
+    tokio::spawn(async move {
+        let mut appid = None;
+        if let Ok(m_opt) = crate::db::get_item_metadata(&name) {
+            if let Some(m) = m_opt {
+                appid = Some(m.appid);
+            } else {
+                let _ = crate::steam::fetch::fetch_item_details(&name).await.map(|m| {
+                    appid = Some(m.appid);
+                    let _ = crate::db::upsert_item_metadata(m);
+                });
+            }
+        }
+
+        // Backfill history if empty or sparse
+        let _ = crate::steam::fetch::fetch_price_history(name.clone(), appid).await.map(|h| {
+            let _ = crate::db::bulk_add_price_history(&name, h);
+        });
+    });
+
+    Ok(PriceResponse {
+        market_hash_name: args.item_name,
+        price,
+        timestamp,
+    })
+}
+
+#[tauri::command]
+pub fn get_item_metadata(market_hash_name: String) -> Result<Option<crate::db::ItemMetadata>, String> {
+    crate::db::get_item_metadata(&market_hash_name)
 }
 
 

@@ -48,6 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_logs_timestamp
 
 CREATE TABLE IF NOT EXISTS item_metadata (
     market_hash_name TEXT PRIMARY KEY,
+    appid INTEGER NOT NULL DEFAULT 730,
     rarity TEXT,
     item_type TEXT,
     collection TEXT,

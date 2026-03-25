@@ -24,7 +24,7 @@
         </div>
 
         <nav id="navbar">
-            <div class="nav-title">SkinVolt</div>
+            <div class="nav-title">SkinVolt <span id="navTier" class="tier-badge" style="margin-left: 10px; font-size: 0.7rem; vertical-align: middle;"></span></div>
             <ul class="nav-links">
                 <li data-view="dashboard" class="active">Dashboard</li>
                 <li data-view="inventory">Inventory</li>
@@ -54,22 +54,37 @@
 
                 <div class="analytics-grid">
                     <div class="analytics-card" id="topMoversCard">
-                        <h3>Trending (24h)</h3>
-                        <div id="topMoversList" class="mini-list">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div class="metric-label">🔥 Trending (24h)</div>
+                            <select id="moverSort" onchange="updateTopMovers()" style="background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; font-size: 0.65rem; padding: 2px 4px;">
+                                <option value="change">Price %</option>
+                                <option value="volatility">Volatility</option>
+                                <option value="price">Highest Price</option>
+                            </select>
+                        </div>
+                        <div id="topMoversList" class="mini-list" style="margin-top: 5px;">
                             <p class="loading">Analyzing market...</p>
                         </div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Volatility</h3>
-                        <p id="dashVolatility">--</p>
+                        <div class="metric-label">⚡ Volatility</div>
+                        <div id="dashVolatility" class="metric-value">--</div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Moving Average (30d)</h3>
-                        <p id="dashSMA30">--</p>
+                        <div class="metric-label">📊 Moving Average (30d)</div>
+                        <div id="dashSMA30" class="metric-value">--</div>
                     </div>
                     <div class="analytics-card">
-                        <h3>Market Trend</h3>
-                        <p id="dashTrend">STABLE</p>
+                        <div class="metric-label">🤖 Market Trend</div>
+                        <div id="dashTrend" class="metric-value">STABLE</div>
+                    </div>
+                    <div class="analytics-card premium-metric" id="rsiCard">
+                        <div class="metric-label">📈 RSI (14)</div>
+                        <div id="dashRSI" class="metric-value">--</div>
+                    </div>
+                    <div class="analytics-card premium-metric" id="momentumCard">
+                        <div class="metric-label">📉 Momentum (7d)</div>
+                        <div id="dashMomentum" class="metric-value">--</div>
                     </div>
                 </div>
             </section>

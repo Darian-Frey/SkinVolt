@@ -17,53 +17,29 @@ use tokio::time::sleep;
 fn start_background_polling(app_handle: AppHandle) {
     async_runtime::spawn(async move {
         loop {
-            // 1. Check the Gatekeeper for the current tier [cite: 3]
             let tier = settings::settings::get_current_tier();
             
-            // 2. Set interval based on the 4-tier model
             let interval_secs = match tier.as_str() {
-                "elite" => 60,      // 1 minute [cite: 13]
-                "pro"   => 3600,    // 1 hour [cite: 10]
-                "basic" => 86400,   // 24 hours (Daily) [cite: 7]
-                _ => 0,             // Free tier: Manual/Startup sync only 
+                "elite" => 60,      // 1 minute
+                "pro"   => 300,     // 5 minutes
+                "basic" => 600,     // 10 minutes
+                "free"  => 3600,    // 1 hour
+                _ => 3600,
             };
 
-            if interval_secs > 0 {
-                println!("🔄 [Polling] Tier: {} | Cycle: {}s", tier.to_uppercase(), interval_secs);
-                
-                if let Ok(items) = db::get_inventory_items_internal() {
-                    for item_name in items {
-                        println!("📡 [Auto-Refresh] Updating: {}", item_name);
-                        let _ = steam::fetch::fetch_price(&item_name).await;
-                        
-                        // Prevent Steam 429 Rate Limits
-                        sleep(Duration::from_millis(2000)).await;
+            println!("🔄 [Polling] Tier: {} | Cycle: {}s", tier.to_uppercase(), interval_secs);
+            
+            if let Ok(items) = db::get_inventory_items_internal() {
+                for item_name in items {
+                    if let Ok((price, ts)) = steam::fetch::fetch_price(&item_name).await {
+                        let _ = steam::cache::cache_price_data(item_name, price, ts);
                     }
+                    sleep(Duration::from_millis(2000)).await;
                 }
-                
-                // 4. Emit event to frontend to refresh the table UI
-                let _ = app_handle.emit("inventory-updated", ());
-                
-                // Sleep until the next scheduled cycle
-                sleep(Duration::from_secs(interval_secs)).await;
-
-            } else if tier == "free" {
-                // ONE-TIME BOOT SYNC: Fetch once 
-                println!("🔄 [Free Tier] Performing initial startup sync...");
-                if let Ok(items) = db::get_inventory_items_internal() {
-                    for name in items {
-                        let _ = steam::fetch::fetch_price(&name).await;
-                        sleep(Duration::from_millis(2000)).await;
-                    }
-                }
-                let _ = app_handle.emit("inventory-updated", ());
-                
-                // Sleep the Free tier loop for an hour to enforce the cooldown 
-                sleep(Duration::from_secs(3600)).await;
-            } else {
-                // Safety sleep for undefined tiers
-                sleep(Duration::from_secs(60)).await;
             }
+            
+            let _ = app_handle.emit("inventory-updated", ());
+            sleep(Duration::from_secs(interval_secs)).await;
         }
     });
 }
@@ -87,6 +63,7 @@ fn main() {
             commands::get_inventory_full,
             commands::refresh_steam_data,
             commands::add_item,
+            commands::get_item_metadata,
             settings::settings::get_setting,
             settings::settings::set_refresh_interval,
             settings::settings::set_currency_preference,

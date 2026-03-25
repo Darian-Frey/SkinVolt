@@ -6,6 +6,8 @@ pub struct ItemAnalytics {
     pub volatility: f64,
     pub sma_7: f64,
     pub sma_30: f64,
+    pub rsi: f64,
+    pub momentum: f64,
     pub trend: String,
 }
 
@@ -17,6 +19,8 @@ pub fn get_item_analytics(market_hash_name: String) -> Result<ItemAnalytics, Str
     
     let volatility = indicators::calculate_volatility(&history_30);
     let sma_30 = indicators::calculate_moving_average(&history_30);
+    let rsi = indicators::calculate_rsi(&history_30, 14);
+    let momentum = indicators::calculate_momentum(&history_30, 7);
     
     let history_7 = if history_30.len() >= 7 { &history_30[0..7] } else { &history_30 };
     let sma_7 = indicators::calculate_moving_average(history_7);
@@ -27,6 +31,8 @@ pub fn get_item_analytics(market_hash_name: String) -> Result<ItemAnalytics, Str
         volatility,
         sma_7,
         sma_30,
+        rsi,
+        momentum,
         trend,
     })
 }
@@ -38,15 +44,23 @@ pub struct PricePoint {
     pub sma: Option<f64>,
     pub upper_band: Option<f64>,
     pub lower_band: Option<f64>,
+    pub rsi: Option<f64>,
 }
 
 #[tauri::command]
 pub fn get_item_history_full(market_hash_name: String) -> Result<Vec<PricePoint>, String> {
+    let tier = crate::settings::settings::get_current_tier();
     let conn = crate::db::get_db().map_err(|e| e.to_string())?;
-    let mut stmt = conn
-        .prepare("SELECT timestamp, price FROM price_history WHERE market_hash_name = ?1 ORDER BY timestamp ASC")
-        .map_err(|e| e.to_string())?;
+    
+    // GATING: Basic tier only gets 7 days of data
+    let query = if tier == "basic" || tier == "free" {
+        let seven_days_ago = chrono::Utc::now().timestamp() - (7 * 24 * 3600);
+        format!("SELECT timestamp, price FROM price_history WHERE market_hash_name = ?1 AND timestamp > {} ORDER BY timestamp ASC", seven_days_ago)
+    } else {
+        "SELECT timestamp, price FROM price_history WHERE market_hash_name = ?1 ORDER BY timestamp ASC".to_string()
+    };
 
+    let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
     let rows = stmt.query_map([market_hash_name], |row| {
         Ok((row.get::<_, i64>(0)?, row.get::<_, f64>(1)?))
     })
@@ -71,13 +85,15 @@ pub fn get_item_history_full(market_hash_name: String) -> Result<Vec<PricePoint>
         
         let sma = indicators::calculate_moving_average(&prices);
         let vol = indicators::calculate_volatility(&prices);
+        let rsi = indicators::calculate_rsi(&prices, 14);
         
         history.push(PricePoint {
             timestamp: ts,
             price,
             sma: Some(sma),
-            upper_band: Some(sma + (vol * 2.0)), // 2 Std Dev
+            upper_band: Some(sma + (vol * 2.0)), 
             lower_band: Some(sma - (vol * 2.0)),
+            rsi: Some(rsi),
         });
     }
 
@@ -85,8 +101,8 @@ pub fn get_item_history_full(market_hash_name: String) -> Result<Vec<PricePoint>
 }
 
 #[tauri::command]
-pub fn get_top_movers(limit: u32) -> Result<Vec<crate::db::TopMover>, String> {
-    crate::db::get_top_movers_db(limit)
+pub fn get_top_movers(limit: u32, sort_by: Option<String>) -> Result<Vec<crate::db::TopMover>, String> {
+    crate::db::get_top_movers_db(limit, sort_by)
 }
 
 #[tauri::command]

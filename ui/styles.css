@@ -1,24 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* Core Design Tokens */
 :root {
     --bg: #ffffff;
     --fg: #222222;
     --accent: #4a7aff;
     --nav-bg: #f0f0f0;
+    --chart-grid: rgba(0, 0, 0, 0.05);
+    --chart-tick: #666666;
 }
 
+/* Dark Mode Overrides */
 [data-theme="dark"] {
     --bg: #121212;
     --fg: #e0e0e0;
     --accent: #4a7aff;
     --nav-bg: #1e1e1e;
+    --chart-grid: rgba(255, 255, 255, 0.05);
+    --chart-tick: #888888;
 }
 
 body {
     margin: 0;
     background: var(--bg);
     color: var(--fg);
-    font-family: system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 
+/* Navigation Bar */
 #navbar {
     display: flex;
     align-items: center;
@@ -50,10 +59,12 @@ body {
     color: white;
 }
 
+/* Main Content Area */
 #content {
     padding: 20px;
 }
 
+/* View Switching */
 .view {
     display: none;
 }
@@ -62,15 +73,7 @@ body {
     display: block !important;
 }
 
-.placeholder {
-    margin-top: 20px;
-    padding: 40px;
-    border: 2px dashed #999;
-    border-radius: 8px;
-    text-align: center;
-    opacity: 0.7;
-}
-
+/* Forms & Buttons */
 .settings-group {
     margin-bottom: 20px;
 }
@@ -89,6 +92,7 @@ button {
     cursor: pointer;
 }
 
+/* Inventory Table */
 #inventoryTable {
     width: 100%;
     border-collapse: collapse;
@@ -103,16 +107,9 @@ button {
     padding: 12px;
     background: var(--accent);
     color: white;
-    font-family: 'JetBrains Mono', monospace;
-    /* Professional numeric look */
 }
 
-#inventoryTable td {
-    padding: 12px;
-    border-bottom: 1px solid #444;
-}
-
-/* Tier Badges Styling */
+/* Tier Badges */
 .tier-badge {
     padding: 4px 12px;
     border-radius: 4px;
@@ -120,10 +117,8 @@ button {
     font-size: 0.75rem;
     font-weight: bold;
     text-transform: uppercase;
-    border: 1px solid transparent;
 }
 
-/* Specific Tier Colors [cite: 38, 146] */
 .badge-free {
     background: #444;
     color: #ccc;
@@ -134,90 +129,122 @@ button {
     color: white;
 }
 
-/* Green [cite: 136] */
 .badge-pro {
     background: #1565c0;
     color: white;
-    border-color: var(--accent);
-}
-
-/* Blue [cite: 139] */
-.badge-elite {
-    background: linear-gradient(45deg, #0A1A2F, #2F8FFF);
-    color: #F5C15C;
-    /* Gold Accent  */
-    border: 1px solid #F5C15C;
-    box-shadow: 0 0 10px rgba(47, 143, 255, 0.5);
-}
-.offline-banner {
-    display: none;
-    background: #ff4a4a;
-    color: white;
-    text-align: center;
-    padding: 10px;
-    font-weight: bold;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-.offline-banner.active {
-    display: block;
-}
-
-/* --- Phase 3: Premium Analytics UI --- */
-
-.premium-card {
-    background: var(--nav-bg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    margin-bottom: 20px;
-}
-
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.market-summary {
-    background: rgba(74, 122, 255, 0.1);
-    padding: 8px 16px;
-    border-radius: 20px;
     border: 1px solid var(--accent);
 }
 
-#marketTrend {
-    font-weight: bold;
-    color: var(--accent);
+.badge-elite {
+    background: linear-gradient(45deg, #0A1A2F, #2F8FFF);
+    color: #F5C15C;
+    border: 1px solid #F5C15C;
+    box-shadow: 0 0 10px rgba(47, 143, 255, 0.5);
 }
 
+/* Premium Gating UI */
+.premium-metric[data-locked="true"] {
+    opacity: 0.6;
+    filter: blur(1px) grayscale(0.8);
+    pointer-events: none;
+    position: relative;
+}
+
+.premium-metric[data-locked="true"]::after {
+    content: attr(data-tier);
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #ffaa00;
+    color: #000;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* Market Intelligence Dashboard */
 .chart-container {
-    height: 350px;
+    height: 380px;
     width: 100%;
     position: relative;
-    background: linear-gradient(180deg, rgba(30,30,30,0) 0%, rgba(30,30,30,0.5) 100%);
+    /* Reduced bottom opacity (0.4 instead of 0.8) for better data contrast */
+    background: linear-gradient(180deg, rgba(30, 30, 30, 0) 0%, rgba(30, 30, 30, 0.4) 100%);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 30px;
 }
 
+/* Analytics Grid Layout */
 .analytics-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
 }
 
+
+/* Modern Analytics Cards */
 .analytics-card {
-    background: var(--nav-bg);
-    border-left: 4px solid var(--accent);
-    padding: 15px;
-    border-radius: 8px;
-    transition: transform 0.2s;
+    background: rgba(20, 20, 20, 0.65);
+    /* Deeper charcoal for contrast */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    /*border-left: 4px solid var(--accent);*/
+    padding: 20px;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .analytics-card:hover {
     transform: translateY(-5px);
+    background: rgba(50, 50, 50, 0.6);
+    border-color: var(--accent);
+}
+
+.metric-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+    /* High contrast */
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.8;
+}
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.metric-trend-up {
+    color: #00ff88;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+}
+
+.metric-trend-down {
+    color: #ff3366;
+    text-shadow: 0 0 10px rgba(255, 51, 102, 0.2);
+}
+
+.metric-trend-stable {
+    color: #4a7aff;
+    text-shadow: 0 0 10px rgba(74, 122, 255, 0.2);
+}
+
+.monospace {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
 }
 
 .analytics-card h3 {
@@ -244,15 +271,20 @@ button {
     display: flex;
     justify-content: space-between;
     padding: 6px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.up { color: #4caf50; }
-.down { color: #f44336; }
+.up {
+    color: #4caf50;
+}
+
+.down {
+    color: #f44336;
+}
 
 .search-box input {
     background: var(--nav-bg);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--fg);
     padding: 8px 15px;
     border-radius: 20px;
@@ -276,15 +308,145 @@ button {
 }
 
 .btn-timeframe {
-    padding: 4px 10px;
-    font-size: 0.7rem;
-    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(20, 20, 20, 0.65); /* Non-selected charcoal as requested */
     border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #888;
+    color: rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-timeframe:hover {
+    background: rgba(40, 40, 40, 0.8);
+    color: white;
 }
 
 .btn-timeframe.active {
-    background: var(--accent);
+    background: var(--accent); /* Action blue */
     color: white;
     border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(74, 122, 255, 0.3);
+}
+
+/* --- Premium Item Cards --- */
+#inventoryBody {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 10px;
+}
+
+/* Override table behavior if we were using it */
+#inventoryTable,
+#inventoryTable thead {
+    display: block;
+}
+
+#inventoryTable thead {
+    display: none;
+}
+
+#inventoryTable td {
+    padding: 12px;
+    border-bottom: 1px solid #444;
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+.item-card {
+    background: var(--nav-bg);
+    border-radius: 12px;
+    padding: 15px;
+    border-bottom: 4px solid #444;
+    /* Default rarity */
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.item-card .icon-container {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+}
+
+.item-card img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.item-card .item-name {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.item-card .item-collection {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    margin-bottom: 8px;
+}
+
+.item-card .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.item-card .price {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.item-card .qty {
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* Rarity Colors [cite: CS:GO standard] */
+.rarity-consumer {
+    border-color: #b0c3d9;
+}
+
+.rarity-industrial {
+    border-color: #5e98d9;
+}
+
+.rarity-mil-spec {
+    border-color: #4b69ff;
+}
+
+.rarity-restricted {
+    border-color: #8847ff;
+}
+
+.rarity-classified {
+    border-color: #d32ce6;
+}
+
+.rarity-covert {
+    border-color: #eb4b4b;
+}
+
+.rarity-gold {
+    border-color: #e4ae39;
 }
