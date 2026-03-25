@@ -184,11 +184,21 @@ async function refreshPrice(name) {
     try {
         const data = await window.invoke("refresh_steam_data", { args: { item_name: name } });
         if (targetCell) targetCell.innerText = `$${data.price.toFixed(2)}`;
-        // Stamp the row with the fresh timestamp so _tickCooldowns starts counting down immediately
         if (row) row.dataset.lastUpdated = data.timestamp.toString();
+        renderOfflineModeBanner(false); // Hide banner on success
     } catch (err) {
         console.error("Fetch failed:", err);
         if (targetCell) targetCell.innerText = "❌ Error (See Logs)";
+        renderOfflineModeBanner(true); // Show banner on failure
+    }
+}
+
+function renderOfflineModeBanner(show) {
+    const banner = document.getElementById("offlineBanner");
+    if (show) {
+        banner.classList.add("active");
+    } else {
+        banner.classList.remove("active");
     }
 }
 

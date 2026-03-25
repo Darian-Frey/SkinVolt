@@ -26,7 +26,7 @@ pub fn init_db() -> Result<()> {
     let path = db_path();
     eprintln!("[db] database path: {}", path.display());
     let conn = Connection::open(&path)?;
-    let schema = include_str!("schema.sql");
+    let schema = include_str!("../schema.sql");
     conn.execute_batch(schema)?;
     eprintln!("[db] schema applied successfully");
     Ok(())

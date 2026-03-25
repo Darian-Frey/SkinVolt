@@ -38,7 +38,7 @@ pub struct AddItemArgs {
 }
 
 #[command]
-pub fn add_item(args: AddItemArgs) -> Result<(), String> {
+pub async fn add_item(args: AddItemArgs) -> Result<(), String> {
     if args.name.trim().is_empty() {
         return Err("Item name cannot be empty".into());
     }
@@ -47,7 +47,7 @@ pub fn add_item(args: AddItemArgs) -> Result<(), String> {
     crate::db::add_inventory_item(args.name.clone(), args.quantity)?;
 
     // THE HOOK: Every tier, including Free, gets one initial fetch on add 
-    match crate::steam::fetch::fetch_price(&args.name) {
+    match crate::steam::fetch::fetch_price(&args.name).await {
         Ok((price, timestamp)) => {
             let _ = crate::steam::cache::cache_price_data(args.name, price, timestamp);
             Ok(())
@@ -60,7 +60,7 @@ pub fn add_item(args: AddItemArgs) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn refresh_steam_data(args: RefreshArgs) -> Result<PriceResponse, String> {
+pub async fn refresh_steam_data(args: RefreshArgs) -> Result<PriceResponse, String> {
     // 1. Tier Check
     let tier = crate::settings::settings::get_current_tier();
     
@@ -94,7 +94,7 @@ pub fn refresh_steam_data(args: RefreshArgs) -> Result<PriceResponse, String> {
     }
 
     // 3. Call the fetcher
-    match crate::steam::fetch::fetch_price(&args.item_name) {
+    match crate::steam::fetch::fetch_price(&args.item_name).await {
         Ok((price, timestamp)) => {
             // Cache it for Phase 1 offline support and Phase 2 history tracking
             let _ = crate::steam::cache::cache_price_data(args.item_name.clone(), price, timestamp);

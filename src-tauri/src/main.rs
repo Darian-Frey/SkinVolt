@@ -3,6 +3,9 @@ mod db;
 mod steam;
 mod settings;
 mod utils;
+mod analytics;
+mod alerts;
+mod inventory;
 
 use std::time::Duration;
 // FIX 1: Ensure Emitter and Manager are imported correctly for Tauri v2
@@ -31,7 +34,7 @@ fn start_background_polling(app_handle: AppHandle) {
                 if let Ok(items) = db::get_inventory_items_internal() {
                     for item_name in items {
                         println!("📡 [Auto-Refresh] Updating: {}", item_name);
-                        let _ = steam::fetch::fetch_price(&item_name);
+                        let _ = steam::fetch::fetch_price(&item_name).await;
                         
                         // Prevent Steam 429 Rate Limits
                         sleep(Duration::from_millis(2000)).await;
@@ -49,7 +52,7 @@ fn start_background_polling(app_handle: AppHandle) {
                 println!("🔄 [Free Tier] Performing initial startup sync...");
                 if let Ok(items) = db::get_inventory_items_internal() {
                     for name in items {
-                        let _ = steam::fetch::fetch_price(&name);
+                        let _ = steam::fetch::fetch_price(&name).await;
                         sleep(Duration::from_millis(2000)).await;
                     }
                 }
