@@ -44,8 +44,10 @@
                 
                 <div class="chart-container premium-card">
                     <div class="chart-controls">
+                        <button class="btn-timeframe" onclick="changeTimeframe(1)">1D</button>
                         <button class="btn-timeframe" onclick="changeTimeframe(7)">7D</button>
                         <button class="btn-timeframe active" onclick="changeTimeframe(30)">30D</button>
+                        <button class="btn-timeframe" onclick="changeTimeframe(90)">90D</button>
                     </div>
                     <canvas id="mainChart"></canvas>
                 </div>

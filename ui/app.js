@@ -282,39 +282,91 @@ async function updateDashboard(itemName) {
 
 function renderPriceChart(history, name) {
     const ctx = document.getElementById('mainChart').getContext('2d');
+    const isPro = ['pro', 'elite'].includes(_currentTier);
     
-    const labels = history.map(p => new Date(p.timestamp * 1000).toLocaleDateString());
-    const data = history.map(p => p.price);
+    const labels = history.map(p => new Date(p.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }));
+    
+    const priceData = history.map(p => p.price);
+    const smaData = isPro ? history.map(p => p.sma) : [];
+    const upperBand = isPro ? history.map(p => p.upper_band) : [];
+    const lowerBand = isPro ? history.map(p => p.lower_band) : [];
 
     if (_mainChart) {
         _mainChart.destroy();
+    }
+
+    const datasets = [
+        {
+            label: 'Price',
+            data: priceData,
+            borderColor: '#4a7aff',
+            backgroundColor: 'rgba(74, 122, 255, 0.1)',
+            borderWidth: 3,
+            tension: 0.4,
+            pointRadius: 1,
+            fill: true,
+            order: 2
+        }
+    ];
+
+    if (isPro && history.length > 5) {
+        // Simple Moving Average
+        datasets.push({
+            label: 'SMA (20)',
+            data: smaData,
+            borderColor: 'rgba(255, 165, 0, 0.6)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false,
+            tension: 0.4,
+            order: 1
+        });
+
+        // Bollinger Bands (Upper)
+        datasets.push({
+            label: 'Volatility Band',
+            data: upperBand,
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            pointRadius: 0,
+            fill: '+1', // Fill to lower band
+            backgroundColor: 'rgba(74, 122, 255, 0.05)',
+            tension: 0.4,
+            order: 3
+        });
+
+        datasets.push({
+            label: 'Lower Band',
+            data: lowerBand,
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            pointRadius: 0,
+            fill: false,
+            tension: 0.4,
+            order: 3
+        });
     }
 
     _mainChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: name,
-                data: data,
-                borderColor: '#4a7aff',
-                backgroundColor: 'rgba(74, 122, 255, 0.1)',
-                borderWidth: 3,
-                tension: 0.4,
-                pointRadius: 2,
-                fill: true
-            }]
+            datasets: datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            },
             plugins: {
-                legend: { display: false }
+                legend: { display: isPro, position: 'bottom', labels: { color: '#888', font: { size: 10 } } },
+                tooltip: { backgroundColor: '#1e1e1e', titleColor: '#4a7aff' }
             },
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#888' }
+                    ticks: { color: '#888', maxTicksLimit: 8 }
                 },
                 y: {
                     grid: { color: 'rgba(255,255,255,0.05)' },

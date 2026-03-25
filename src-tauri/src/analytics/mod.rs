@@ -35,6 +35,9 @@ pub fn get_item_analytics(market_hash_name: String) -> Result<ItemAnalytics, Str
 pub struct PricePoint {
     pub timestamp: i64,
     pub price: f64,
+    pub sma: Option<f64>,
+    pub upper_band: Option<f64>,
+    pub lower_band: Option<f64>,
 }
 
 #[tauri::command]
@@ -45,16 +48,38 @@ pub fn get_item_history_full(market_hash_name: String) -> Result<Vec<PricePoint>
         .map_err(|e| e.to_string())?;
 
     let rows = stmt.query_map([market_hash_name], |row| {
-        Ok(PricePoint {
-            timestamp: row.get(0)?,
-            price: row.get(1)?,
-        })
+        Ok((row.get::<_, i64>(0)?, row.get::<_, f64>(1)?))
     })
     .map_err(|e| e.to_string())?;
 
-    let mut history = Vec::new();
+    let mut raw_data = Vec::new();
     for r in rows {
-        if let Ok(p) = r { history.push(p); }
+        if let Ok(p) = r { raw_data.push(p); }
     }
+
+    // --- CALCULATE OVERLAYS (Moving Average & Volatility Bands) ---
+    let mut history = Vec::with_capacity(raw_data.is_empty().then(|| 0).unwrap_or(raw_data.len()));
+    let window_size = 20; // Standard Bollinger window
+
+    for i in 0..raw_data.len() {
+        let (ts, price) = raw_data[i];
+        
+        // Window calculations
+        let start = if i >= window_size { i + 1 - window_size } else { 0 };
+        let slice = &raw_data[start..=i];
+        let prices: Vec<f64> = slice.iter().map(|&(_, p)| p).collect();
+        
+        let sma = indicators::calculate_moving_average(&prices);
+        let vol = indicators::calculate_volatility(&prices);
+        
+        history.push(PricePoint {
+            timestamp: ts,
+            price,
+            sma: Some(sma),
+            upper_band: Some(sma + (vol * 2.0)), // 2 Std Dev
+            lower_band: Some(sma - (vol * 2.0)),
+        });
+    }
+
     Ok(history)
 }
