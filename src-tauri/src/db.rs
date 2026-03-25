@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 
 /// Returns the path to SkinVolt's database file.
-fn db_path() -> PathBuf {
+pub fn db_path() -> PathBuf {
     let proj = ProjectDirs::from("com", "SkinVolt", "SkinVolt")
         .expect("Failed to get project directory");
 
@@ -23,19 +23,12 @@ pub fn get_db() -> Result<Connection> {
 
 /// Runs schema.sql to initialize all tables.
 pub fn init_db() -> Result<()> {
-    let conn = get_db()?;
-
-    // Load schema.sql from the same directory as this file
-    let schema_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("src-tauri")
-        .join("src")
-        .join("schema.sql");
-
-    let schema = fs::read_to_string(&schema_path)
-        .expect("Failed to read schema.sql");
-
-    conn.execute_batch(&schema)?;
-
+    let path = db_path();
+    eprintln!("[db] database path: {}", path.display());
+    let conn = Connection::open(&path)?;
+    let schema = include_str!("schema.sql");
+    conn.execute_batch(schema)?;
+    eprintln!("[db] schema applied successfully");
     Ok(())
 }
 

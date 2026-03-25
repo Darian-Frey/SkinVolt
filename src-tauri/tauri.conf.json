@@ -1,17 +1,23 @@
 {
+    "$schema": "https://schema.tauri.app/config/2",
     "identifier": "com.skinvolt.app",
     "productName": "SkinVolt",
     "version": "0.1.0",
     "build": {
+        "beforeDevCommand": "",
+        "beforeBuildCommand": "",
         "frontendDist": "../ui"
     },
     "app": {
+        "withGlobalTauri": true,
         "windows": [
             {
                 "title": "SkinVolt",
                 "width": 1200,
                 "height": 800,
-                "resizable": true
+                "resizable": true,
+                "devtools": true,
+                "url": "index.html"
             }
         ]
     }

@@ -5,8 +5,18 @@
     <meta charset="UTF-8" />
     <title>SkinVolt</title>
     <link rel="stylesheet" href="styles.css" />
+
+    <!-- Load Tauri v2 API -->
+    <script type="module">
+        import { invoke } from "tauri://core";
+        window.invoke = invoke;
+        console.log("Tauri API loaded");
+    </script>
+
     <script defer src="app.js"></script>
 </head>
+
+
 
 <body>
     <div id="app">

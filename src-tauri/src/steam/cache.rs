@@ -6,15 +6,17 @@ use rusqlite::OptionalExtension;
 
 /// Store the latest price for an item.
 #[tauri::command]
-pub fn cache_price_data(market_hash_name: String, price: f64, timestamp: i64) -> Result<(), String> {
-    let conn = get_db().map_err(|e| e.to_string())?;
+pub fn cache_price_data(
+    market_hash_name: String,
+    price: f64,
+    timestamp: i64,
+) -> Result<(), String> {
+    let conn = crate::db::get_db().map_err(|e| e.to_string())?;
 
     conn.execute(
         "INSERT INTO price_cache (market_hash_name, price, timestamp)
-         VALUES (?1, ?2, ?3)
-         ON CONFLICT(market_hash_name)
-         DO UPDATE SET price = excluded.price, timestamp = excluded.timestamp",
-        params![market_hash_name, price, timestamp],
+         VALUES (?1, ?2, ?3)",
+        (market_hash_name, price, timestamp),
     )
     .map_err(|e| e.to_string())?;
 

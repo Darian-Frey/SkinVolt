@@ -1,3 +1,7 @@
+import { invoke } from "@tauri-apps/api/core";
+window.invoke = window.__TAURI__.core.invoke;
+
+
 // Navigation switching
 document.querySelectorAll("#navbar .nav-links li").forEach(link => {
     link.addEventListener("click", () => {
@@ -46,14 +50,28 @@ document.getElementById("saveSettings").addEventListener("click", async () => {
     alert("Settings saved");
 });
 
-window.__TAURI__.core.invoke("get_inventory")
-    .then(raw => {
-        const items = JSON.parse(raw);
-        console.log("Inventory:", items);
-    })
-    .catch(err => console.error("Inventory error:", err));
+async function refreshPrice(name) {
+    try {
+        const raw = await window.__TAURI__.core.invoke("refresh_steam_data", name);
+        const data = JSON.parse(raw);
+
+        console.log("Updated price:", data);
+
+        // TODO: update UI row
+    } catch (err) {
+        console.error("Steam refresh error:", err);
+    }
+
+    window.__TAURI__.core.invoke("get_inventory")
+        .then(raw => {
+            const items = JSON.parse(raw);
+            console.log("Inventory:", items);
+        })
+        .catch(err => console.error("Inventory error:", err));
 
 
 
-// Initialize UI
-loadTheme();
+    // Initialize UI
+    loadTheme();
+
+}
