@@ -56,6 +56,19 @@ pub fn get_setting(key: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn dev_set_tier(tier: String) -> Result<(), String> {
+    // Only allow valid tiers from your strategic model [cite: 131]
+    let valid_tiers = vec!["free", "basic", "pro", "elite"];
+    if !valid_tiers.contains(&tier.to_lowercase().as_str()) {
+        return Err("Invalid tier specified".into());
+    }
+
+    write_setting("tier_level", &tier.to_lowercase())?;
+    println!("🛠️ DEV MODE: Tier shifted to {}", tier.to_uppercase());
+    Ok(())
+}
+
+#[tauri::command]
 pub fn set_refresh_interval(seconds: u32) -> Result<(), String> {
     write_setting("refresh_interval", &seconds.to_string())
 }

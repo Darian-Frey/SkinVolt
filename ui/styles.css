@@ -112,12 +112,40 @@ button {
     border-bottom: 1px solid #444;
 }
 
+/* Tier Badges Styling */
 .tier-badge {
-    background: var(--accent);
-    color: white;
     padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    text-transform: uppercase;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
     font-weight: bold;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+}
+
+/* Specific Tier Colors [cite: 38, 146] */
+.badge-free {
+    background: #444;
+    color: #ccc;
+}
+
+.badge-basic {
+    background: #2e7d32;
+    color: white;
+}
+
+/* Green [cite: 136] */
+.badge-pro {
+    background: #1565c0;
+    color: white;
+    border-color: var(--accent);
+}
+
+/* Blue [cite: 139] */
+.badge-elite {
+    background: linear-gradient(45deg, #0A1A2F, #2F8FFF);
+    color: #F5C15C;
+    /* Gold Accent  */
+    border: 1px solid #F5C15C;
+    box-shadow: 0 0 10px rgba(47, 143, 255, 0.5);
 }

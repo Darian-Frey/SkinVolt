@@ -90,18 +90,33 @@ document.getElementById("addItemBtn").addEventListener("click", async () => {
 
 async function renderInventory() {
     const tbody = document.getElementById("inventoryBody");
+    const currentTier = await window.invoke("get_setting", { key: "tier_level" });
+
     try {
-        const raw = await window.__TAURI__.core.invoke("get_inventory");
+        const raw = await window.invoke("get_inventory");
         const items = JSON.parse(raw);
 
-        tbody.innerHTML = items.map(item => `
-            <tr>
-                <td>${item.market_hash_name}</td>
-                <td>${item.quantity}</td>
-                <td class="price-cell">Pending...</td>
-                <td><button onclick="refreshPrice('${item.market_hash_name}')">Refresh</button></td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = items.map(item => {
+            // Strategic Logic: Lock the button for Free users 
+            const isLocked = currentTier === "free";
+            const btnClass = isLocked ? "btn-locked" : "btn-refresh-active";
+            const btnText = isLocked ? "🔒 1hr Cooldown" : "⚡ Refresh";
+
+            return `
+                <tr>
+                    <td>${item.market_hash_name}</td>
+                    <td>${item.quantity}</td>
+                    <td class="price-cell">Pending...</td>
+                    <td>
+                        <button class="${btnClass}" 
+                                ${isLocked ? 'disabled title="Upgrade to Basic for 10min refreshes"' : ''} 
+                                onclick="refreshPrice('${item.market_hash_name}')">
+                            ${btnText}
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     } catch (err) {
         console.error("Inventory render failed:", err);
     }
@@ -131,6 +146,47 @@ async function refreshPrice(name) {
     // Initialize UI
     loadTheme();
 
+}
+
+async function updateTierUI() {
+    try {
+        const tier = await window.invoke("get_setting", { key: "tier_level" });
+        const display = document.getElementById("tierDisplay");
+
+        // Reset classes
+        display.className = "tier-badge";
+
+        // Apply specific branding [cite: 146]
+        switch (tier.toLowerCase()) {
+            case 'pro':
+                display.classList.add("badge-pro");
+                display.innerText = "⚡ PRO";
+                break;
+            case 'elite':
+                display.classList.add("badge-elite");
+                display.innerText = "💎 ELITE";
+                break;
+            case 'basic':
+                display.classList.add("badge-basic");
+                display.innerText = "✓ BASIC";
+                break;
+            default:
+                display.classList.add("badge-free");
+                display.innerText = "FREE";
+        }
+    } catch (e) {
+        console.error("Tier UI update failed:", e);
+    }
+}
+
+// Call this during your app initialization
+updateTierUI();
+
+async function testTier(newTier) {
+    await window.invoke("dev_set_tier", { tier: newTier });
+    await updateTierUI(); // Refresh the badge [cite: 38]
+    await renderInventory(); // Refresh the "Lock" icons
+    alert(`Testing Mode: ${newTier.toUpperCase()} Active`);
 }
 
 async function initializeSettings() {
