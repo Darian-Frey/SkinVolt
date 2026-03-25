@@ -37,7 +37,7 @@ pub fn add_item(args: AddItemArgs) -> Result<(), String> {
     if args.name.trim().is_empty() {
         return Err("Item name cannot be empty".into());
     }
-
+    // Phase 1: Tier 0 allows unlimited manual entries in the DB 
     crate::db::add_inventory_item(args.name, args.quantity)
 }
 

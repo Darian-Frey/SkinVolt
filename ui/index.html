@@ -6,22 +6,19 @@
     <title>SkinVolt</title>
     <link rel="stylesheet" href="styles.css" />
 
-    <!-- Load Tauri v2 API -->
-    <script type="module">
-        import { invoke } from "tauri://core";
+    <script>
+        // Accessing the v2 core via the window object to avoid the import syntax error seen in console
+        const { invoke } = window.__TAURI__.core;
         window.invoke = invoke;
-        console.log("Tauri API loaded");
+        console.log("SkinVolt: Tauri IPC Bridge Active");
     </script>
 
     <script defer src="app.js"></script>
 </head>
 
-
-
 <body>
     <div id="app">
 
-        <!-- Navigation -->
         <nav id="navbar">
             <div class="nav-title">SkinVolt</div>
             <ul class="nav-links">
@@ -32,7 +29,6 @@
             </ul>
         </nav>
 
-        <!-- Main Content -->
         <main id="content">
             <section id="dashboard-view" class="view active">
                 <h1>Dashboard</h1>
@@ -40,8 +36,30 @@
             </section>
 
             <section id="inventory-view" class="view">
-                <h1>Inventory</h1>
-                <div class="placeholder">Inventory data will load here</div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1>Inventory</h1>
+                    <span class="tier-badge" id="tierDisplay">Tier: Basic</span>
+                </div>
+
+                <div class="inventory-controls" style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <input type="text" id="itemNameInput" placeholder="Item Name (e.g. AK-47 | Slate)"
+                        style="flex-grow: 1;">
+                    <input type="number" id="itemQtyInput" value="1" min="1" style="width: 60px;">
+                    <button id="addItemBtn">Add Item</button>
+                </div>
+
+                <table id="inventoryTable" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 2px solid var(--accent);">
+                            <th style="padding: 10px;">Skin Name</th>
+                            <th style="padding: 10px;">Qty</th>
+                            <th style="padding: 10px;">Market Price</th>
+                            <th style="padding: 10px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryBody">
+                    </tbody>
+                </table>
             </section>
 
             <section id="alerts-view" class="view">

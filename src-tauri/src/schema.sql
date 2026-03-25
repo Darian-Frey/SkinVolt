@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS settings (
 INSERT OR IGNORE INTO settings (key, value) VALUES
     ('refresh_interval', '60'),
     ('currency', 'USD'),
-    ('dark_mode', 'false');
+    ('dark_mode', 'false'),
+    ('tier_level', 'basic');
 
 CREATE TABLE IF NOT EXISTS logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
