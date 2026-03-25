@@ -235,34 +235,171 @@ async function updateTierUI() {
 
 
 
+let _mainChart = null;
+let _currentTimeframe = 30;
+let _currentSelectedItem = null;
+
+async function changeTimeframe(days) {
+    _currentTimeframe = days;
+    document.querySelectorAll('.btn-timeframe').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.getAttribute('onclick').match(/\d+/)[0]) === days);
+    });
+    updateDashboard(_currentSelectedItem);
+}
+
+async function updateDashboard(itemName) {
+    if (!itemName && !_currentSelectedItem) {
+        if (_inventoryData.length > 0) {
+            itemName = _inventoryData[0].market_hash_name;
+        } else {
+            return;
+        }
+    }
+    
+    if (itemName) _currentSelectedItem = itemName;
+    else itemName = _currentSelectedItem;
+
+    try {
+        const analytics = await window.invoke("get_item_analytics", { marketHashName: itemName });
+        let history = await window.invoke("get_item_history_full", { marketHashName: itemName });
+
+        // Clip history to timeframe
+        if (history.length > _currentTimeframe) {
+            history = history.slice(-_currentTimeframe);
+        }
+
+        // Update Text Elements
+        document.getElementById("dashVolatility").innerText = analytics.volatility.toFixed(4);
+        document.getElementById("dashSMA30").innerText = `$${analytics.sma_30.toFixed(2)}`;
+        document.getElementById("dashTrend").innerText = analytics.trend.toUpperCase();
+        document.getElementById("marketTrend").innerText = `Target: ${itemName} | Signal: ${analytics.trend.toUpperCase()}`;
+
+        renderPriceChart(history, itemName);
+    } catch (err) {
+        console.error("Dashboard update failed:", err);
+    }
+}
+
+function renderPriceChart(history, name) {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    
+    const labels = history.map(p => new Date(p.timestamp * 1000).toLocaleDateString());
+    const data = history.map(p => p.price);
+
+    if (_mainChart) {
+        _mainChart.destroy();
+    }
+
+    _mainChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: name,
+                data: data,
+                borderColor: '#4a7aff',
+                backgroundColor: 'rgba(74, 122, 255, 0.1)',
+                borderWidth: 3,
+                tension: 0.4,
+                pointRadius: 2,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#888' }
+                },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { 
+                        color: '#888',
+                        callback: (value) => '$' + value.toFixed(2)
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update the navigation switcher to trigger dashboard update
+document.querySelectorAll("#navbar .nav-links li").forEach(link => {
+    link.addEventListener("click", () => {
+        const viewId = link.getAttribute("data-view");
+        if (viewId === "dashboard") {
+            updateDashboard();
+        }
+    });
+});
+
+// Update renderInventory to include a "Show Chart" link or click
+async function renderInventory() {
+    const tbody = document.getElementById("inventoryBody");
+
+    try {
+        _currentTier = await window.invoke("get_setting", { key: "tier_level" });
+        _inventoryData = await window.invoke("get_inventory_full");
+
+        tbody.innerHTML = _inventoryData.map(item => {
+            const priceText = item.price != null ? `$${item.price.toFixed(2)}` : 'Pending...';
+            const lastUpdated = item.last_updated || 0;
+            const remaining = _remainingSecs(lastUpdated, _currentTier);
+            const btnDisabled = remaining > 0 ? 'disabled' : '';
+            const btnClass = remaining > 0 ? 'btn-locked btn-refresh' : 'btn-refresh-active btn-refresh';
+            const btnText = remaining > 0 ? `⏳ ${_fmtCountdown(remaining)}` : '⚡ Refresh';
+            const safeName = item.market_hash_name.replace(/'/g, "\\'");
+
+            return `
+                <tr data-item="${item.market_hash_name}" data-last-updated="${lastUpdated}">
+                    <td style="cursor: pointer; color: var(--accent);" onclick="showItemDetails('${safeName}')">
+                        ${item.market_hash_name}
+                    </td>
+                    <td>${item.quantity}</td>
+                    <td class="price-cell">${priceText}</td>
+                    <td>
+                        <button class="${btnClass} btn-refresh" ${btnDisabled}
+                                onclick="refreshPrice('${safeName}')">
+                            ${btnText}
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error("Inventory render failed:", err);
+    }
+}
+
+async function showItemDetails(name) {
+    // Switch to dashboard and show this item
+    document.querySelector('[data-view="dashboard"]').click();
+    updateDashboard(name);
+}
+
 async function testTier(newTier) {
     await window.invoke("dev_set_tier", { tier: newTier });
-    await updateTierUI(); // Refresh the badge [cite: 38]
-    await renderInventory(); // Refresh the "Lock" icons
-    alert(`Testing Mode: ${newTier.toUpperCase()} Active`);
+    await updateTierUI(); 
+    await renderInventory(); 
+    console.log(`Testing Mode: ${newTier.toUpperCase()} Active`);
 }
 
 async function initializeSettings() {
     try {
-        // 1. Load and Apply Theme
-        const darkMode = await window.__TAURI__.core.invoke("get_setting", { key: "dark_mode" });
+        const darkMode = await window.invoke("get_setting", { key: "dark_mode" });
         if (darkMode === "true") {
             document.documentElement.setAttribute("data-theme", "dark");
             document.getElementById("darkModeToggle").checked = true;
         }
-
-        // 2. Load and Apply Currency
-        const currency = await window.__TAURI__.core.invoke("get_setting", { key: "currency" });
+        const currency = await window.invoke("get_setting", { key: "currency" });
         document.getElementById("currencySelect").value = currency;
-
-        // 3. Load Refresh Interval
-        const interval = await window.__TAURI__.core.invoke("get_setting", { key: "refresh_interval" });
+        const interval = await window.invoke("get_setting", { key: "refresh_interval" });
         document.getElementById("refreshInterval").value = interval;
-
-        // 4. Update Tier Badge (Optional UI Polish)
-        const tier = await window.__TAURI__.core.invoke("get_setting", { key: "tier_level" });
-        console.log("SkinVolt initialized with tier:", tier);
-
     } catch (e) {
         console.error("Failed to load settings from DB:", e);
     }
@@ -270,7 +407,7 @@ async function initializeSettings() {
 
 // Initialize listeners on boot
 setupEventListeners();
-// Call this during your app initialization
 updateTierUI();
-// Ensure this runs when the script loads
 initializeSettings();
+// Initial dashboard load
+setTimeout(updateDashboard, 500); 

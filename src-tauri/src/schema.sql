@@ -13,10 +13,17 @@ CREATE INDEX IF NOT EXISTS idx_price_cache_timestamp
     ON price_cache (timestamp);
 
 CREATE TABLE IF NOT EXISTS price_history (
-    market_hash_name TEXT PRIMARY KEY,
-    history_json TEXT NOT NULL,
-    last_updated INTEGER NOT NULL
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    market_hash_name TEXT NOT NULL,
+    price REAL NOT NULL,
+    timestamp INTEGER NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_price_history_market_hash_name
+    ON price_history (market_hash_name);
+
+CREATE INDEX IF NOT EXISTS idx_price_history_timestamp
+    ON price_history (timestamp);
 
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,

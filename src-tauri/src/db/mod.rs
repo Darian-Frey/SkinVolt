@@ -55,6 +55,23 @@ pub fn add_price_history(name: &str, price: f64, timestamp: i64) -> Result<(), S
     Ok(())
 }
 
+/// Retrieves historical price points for an item, latest first
+pub fn get_price_history(name: &str, limit: u32) -> Result<Vec<f64>, String> {
+    let conn = get_db().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT price FROM price_history WHERE market_hash_name = ?1 ORDER BY timestamp DESC LIMIT ?2")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt.query_map(params![name, limit], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+
+    let mut prices = Vec::new();
+    for p in rows {
+        if let Ok(val) = p { prices.push(val); }
+    }
+    Ok(prices)
+}
+
 pub fn get_inventory_full() -> Result<Vec<InventoryItemFull>, String> {
     let conn = get_db().map_err(|e| e.to_string())?;
     let mut stmt = conn
