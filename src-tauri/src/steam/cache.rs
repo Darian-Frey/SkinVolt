@@ -15,7 +15,9 @@ pub fn cache_price_data(
 
     conn.execute(
         "INSERT INTO price_cache (market_hash_name, price, timestamp)
-         VALUES (?1, ?2, ?3)",
+         VALUES (?1, ?2, ?3)
+         ON CONFLICT(market_hash_name)
+         DO UPDATE SET price = excluded.price, timestamp = excluded.timestamp",
         (market_hash_name, price, timestamp),
     )
     .map_err(|e| e.to_string())?;

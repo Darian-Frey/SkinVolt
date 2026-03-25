@@ -7,10 +7,15 @@ pub fn ping() -> &'static str {
 }
 
 #[command]
+pub fn get_inventory_full() -> Result<Vec<crate::db::InventoryItemFull>, String> {
+    crate::db::get_inventory_full()
+}
+
+#[tauri::command]
 pub fn get_inventory() -> Result<String, String> {
     match crate::db::get_inventory() {
-        Ok(items) => Ok(serde_json::to_string(&items).unwrap()),
-        Err(e) => Err(e.to_string()),
+        Ok(items) => serde_json::to_string(&items).map_err(|e| e.to_string()),
+        Err(e) => Err(e.to_string()), // Ensure this matches the Result<String, String> return type
     }
 }
 
@@ -37,31 +42,73 @@ pub fn add_item(args: AddItemArgs) -> Result<(), String> {
     if args.name.trim().is_empty() {
         return Err("Item name cannot be empty".into());
     }
-    // Phase 1: Tier 0 allows unlimited manual entries in the DB 
-    crate::db::add_inventory_item(args.name, args.quantity)
+
+    // Save to DB first
+    crate::db::add_inventory_item(args.name.clone(), args.quantity)?;
+
+    // THE HOOK: Every tier, including Free, gets one initial fetch on add 
+    match crate::steam::fetch::fetch_price(&args.name) {
+        Ok((price, timestamp)) => {
+            let _ = crate::steam::cache::cache_price_data(args.name, price, timestamp);
+            Ok(())
+        }
+        Err(e) => {
+            println!("⚠️ Initial fetch failed: {}", e);
+            Ok(()) // Item is saved, will try again on next manual refresh
+        }
+    }
 }
 
-#[command]
+#[tauri::command]
 pub fn refresh_steam_data(args: RefreshArgs) -> Result<PriceResponse, String> {
-    if args.item_name.trim().is_empty() {
-        return Err("Expected non-empty item_name".into());
+    // 1. Tier Check
+    let tier = crate::settings::settings::get_current_tier();
+    
+    // 2. Cooldown Logic: Check database for last fetch time
+    let last_fetch = crate::db::get_last_fetch_time(&args.item_name).unwrap_or(0);
+    let now = chrono::Utc::now().timestamp();
+    let elapsed = now - last_fetch;
+
+    // Apply Strategic Cooldowns [cite: 5, 7]
+    match tier.as_str() {
+        "free" => {
+            // Only block if we have a successful previous fetch (last_fetch > 0) 
+            if last_fetch != 0 && elapsed < 3600 { // 1 Hour limit 
+                let remaining = (3600 - elapsed) / 60;
+                return Err(format!("Free Tier limit: Please wait {} more minutes.", remaining));
+            }
+        },
+        "basic" => {
+            if last_fetch != 0 && elapsed < 600 {
+                let remaining = (600 - elapsed) / 60;
+                return Err(format!("Basic Tier limit: Please wait {} more minutes.", remaining));
+            }
+        },
+        "pro" => {
+            if last_fetch != 0 && elapsed < 60 {
+                let remaining = 60 - elapsed;
+                return Err(format!("Pro Tier limit: Please wait {} more seconds.", remaining));
+            }
+        },
+        _ => {} // Elite: no manual cooldown
     }
 
+    // 3. Call the fetcher
     match crate::steam::fetch::fetch_price(&args.item_name) {
         Ok((price, timestamp)) => {
-            let _ = crate::steam::cache::cache_price_data(
-                args.item_name.clone(),
-                price,
-                timestamp,
-            );
-
+            // Cache it for Phase 1 offline support and Phase 2 history tracking
+            let _ = crate::steam::cache::cache_price_data(args.item_name.clone(), price, timestamp);
+            
             Ok(PriceResponse {
                 market_hash_name: args.item_name,
                 price,
                 timestamp,
             })
         }
-        Err(e) => Err(e),
+        Err(e) => {
+            println!("❌ [Command Error] Fetch failed for {}: {}", args.item_name, e);
+            Err(e)
+        }
     }
 }
 

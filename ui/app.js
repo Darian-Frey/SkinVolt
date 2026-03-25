@@ -1,5 +1,57 @@
 window.invoke = window.__TAURI__.core.invoke;
+const { listen } = window.__TAURI__.event;
 
+// Module-level state for cooldown ticker
+let _inventoryData = [];
+let _currentTier = 'free';
+
+function _cooldownSecs(tier) {
+    if (tier === 'free')  return 3600;
+    if (tier === 'basic') return 600;
+    if (tier === 'pro')   return 60;
+    return 0; // elite: no cooldown
+}
+
+function _remainingSecs(lastUpdated, tier) {
+    const limit = _cooldownSecs(tier);
+    if (!lastUpdated || limit === 0) return 0;
+    const now = Math.floor(Date.now() / 1000);
+    return Math.max(0, limit - (now - lastUpdated));
+}
+
+function _fmtCountdown(secs) {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+// Updates button text/state every second without re-rendering the table
+function _tickCooldowns() {
+    document.querySelectorAll('#inventoryBody tr[data-item]').forEach(row => {
+        const lastUpdated = parseInt(row.dataset.lastUpdated || '0', 10);
+        const btn = row.querySelector('.btn-refresh');
+        if (!btn) return;
+        const remaining = _remainingSecs(lastUpdated, _currentTier);
+        if (remaining > 0) {
+            btn.disabled = true;
+            btn.textContent = `⏳ ${_fmtCountdown(remaining)}`;
+            btn.className = 'btn-locked btn-refresh';
+        } else {
+            btn.disabled = false;
+            btn.textContent = '⚡ Refresh';
+            btn.className = 'btn-refresh-active btn-refresh';
+        }
+    });
+}
+
+setInterval(_tickCooldowns, 1000);
+
+async function setupEventListeners() {
+    await listen('inventory-updated', () => {
+        console.log("⚡ [SkinVolt] Background sync complete. Refreshing UI...");
+        renderInventory();
+    });
+}
 
 // Navigation switching
 document.querySelectorAll("#navbar .nav-links li").forEach(link => {
@@ -90,27 +142,28 @@ document.getElementById("addItemBtn").addEventListener("click", async () => {
 
 async function renderInventory() {
     const tbody = document.getElementById("inventoryBody");
-    const currentTier = await window.invoke("get_setting", { key: "tier_level" });
 
     try {
-        const raw = await window.invoke("get_inventory");
-        const items = JSON.parse(raw);
+        _currentTier = await window.invoke("get_setting", { key: "tier_level" });
+        _inventoryData = await window.invoke("get_inventory_full");
 
-        tbody.innerHTML = items.map(item => {
-            // Strategic Logic: Lock the button for Free users 
-            const isLocked = currentTier === "free";
-            const btnClass = isLocked ? "btn-locked" : "btn-refresh-active";
-            const btnText = isLocked ? "🔒 1hr Cooldown" : "⚡ Refresh";
+        tbody.innerHTML = _inventoryData.map(item => {
+            const priceText = item.price != null ? `$${item.price.toFixed(2)}` : 'Pending...';
+            const lastUpdated = item.last_updated || 0;
+            const remaining = _remainingSecs(lastUpdated, _currentTier);
+            const btnDisabled = remaining > 0 ? 'disabled' : '';
+            const btnClass = remaining > 0 ? 'btn-locked btn-refresh' : 'btn-refresh-active btn-refresh';
+            const btnText = remaining > 0 ? `⏳ ${_fmtCountdown(remaining)}` : '⚡ Refresh';
+            const safeName = item.market_hash_name.replace(/'/g, "\\'");
 
             return `
-                <tr>
+                <tr data-item="${item.market_hash_name}" data-last-updated="${lastUpdated}">
                     <td>${item.market_hash_name}</td>
                     <td>${item.quantity}</td>
-                    <td class="price-cell">Pending...</td>
+                    <td class="price-cell">${priceText}</td>
                     <td>
-                        <button class="${btnClass}" 
-                                ${isLocked ? 'disabled title="Upgrade to Basic for 10min refreshes"' : ''} 
-                                onclick="refreshPrice('${item.market_hash_name}')">
+                        <button class="${btnClass} btn-refresh" ${btnDisabled}
+                                onclick="refreshPrice('${safeName}')">
                             ${btnText}
                         </button>
                     </td>
@@ -123,29 +176,20 @@ async function renderInventory() {
 }
 
 async function refreshPrice(name) {
+    const row = document.querySelector(`#inventoryBody tr[data-item="${CSS.escape(name)}"]`);
+    const targetCell = row ? row.cells[2] : null;
+
+    if (targetCell) targetCell.innerText = "⏳ Fetching...";
+
     try {
-        const raw = await window.__TAURI__.core.invoke("refresh_steam_data", name);
-        const data = JSON.parse(raw);
-
-        console.log("Updated price:", data);
-
-        // TODO: update UI row
+        const data = await window.invoke("refresh_steam_data", { args: { item_name: name } });
+        if (targetCell) targetCell.innerText = `$${data.price.toFixed(2)}`;
+        // Stamp the row with the fresh timestamp so _tickCooldowns starts counting down immediately
+        if (row) row.dataset.lastUpdated = data.timestamp.toString();
     } catch (err) {
-        console.error("Steam refresh error:", err);
+        console.error("Fetch failed:", err);
+        if (targetCell) targetCell.innerText = "❌ Error (See Logs)";
     }
-
-    window.__TAURI__.core.invoke("get_inventory")
-        .then(raw => {
-            const items = JSON.parse(raw);
-            console.log("Inventory:", items);
-        })
-        .catch(err => console.error("Inventory error:", err));
-
-
-
-    // Initialize UI
-    loadTheme();
-
 }
 
 async function updateTierUI() {
@@ -179,8 +223,7 @@ async function updateTierUI() {
     }
 }
 
-// Call this during your app initialization
-updateTierUI();
+
 
 async function testTier(newTier) {
     await window.invoke("dev_set_tier", { tier: newTier });
@@ -215,5 +258,9 @@ async function initializeSettings() {
     }
 }
 
+// Initialize listeners on boot
+setupEventListeners();
+// Call this during your app initialization
+updateTierUI();
 // Ensure this runs when the script loads
 initializeSettings();
